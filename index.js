@@ -590,7 +590,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
 
   // Kleine, dünne Komponenten entfernen (1.5% Schwelle + Dicke < 4px)
   const mainSize = components.length > 0 ? components[largestIdx].pixels.length : 0;
-  const sizeThreshold = Math.max(240, mainSize * 0.015);
+  const sizeThreshold = Math.max(240, mainSize * 0.03);
 
   for (let c = 0; c < components.length; c++) {
     const comp = components[c];
@@ -825,9 +825,9 @@ app.get("/tee-white-preview", async (req, res) => {
       artworkUrl,
       baseMockupUrl,
       mockupUrl: TEE_WHITE_MOCKUP_URL,
-      scale: 0.36,
-      offsetX: 0.31,
-      offsetY: 0.26,
+      scale: 0.60,
+      offsetX: 0.5,
+      offsetY: 0.5,
       overlayUrl: TEE_WHITE_OVERLAY_URL,
     });
 
@@ -867,9 +867,9 @@ app.get("/tee-black-preview", async (req, res) => {
       artworkUrl,
       baseMockupUrl,
       mockupUrl: TEE_BLACK_MOCKUP_URL,
-      scale: 0.36,
-      offsetX: 0.31,
-      offsetY: 0.26,
+      scale: 0.6,
+      offsetX: 0.5,
+      offsetY: 0.5,
       overlayUrl: TEE_BLACK_OVERLAY_URL,
     });
 
