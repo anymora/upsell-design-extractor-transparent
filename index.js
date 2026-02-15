@@ -873,9 +873,9 @@ app.get("/tee-white-preview", async (req, res) => {
       artworkUrl,
       baseMockupUrl,
       mockupUrl: TEE_WHITE_MOCKUP_URL,
-      scale: 0.44,
-      offsetX: 0.6,
-      offsetY: 0.5,
+      scale: 0.38,
+      offsetX: 0.31,
+      offsetY: 0.27,
       overlayUrl: TEE_WHITE_OVERLAY_URL,
     });
 
