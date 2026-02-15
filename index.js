@@ -96,18 +96,9 @@ async function loadImage(url) {
   if (!resp.ok) {
     throw new Error(`Bild konnte nicht geladen werden: ${url} (HTTP ${resp.status})`);
   }
-
-  const buffer = Buffer.from(await resp.arrayBuffer());
-
-  // WICHTIG:
-  // Falls PNG Transparenz enthält → Alpha entfernen
-  // Dadurch verhindern wir Crash / falsche Diff-Berechnung
-  const processed = await sharp(buffer)
-    .flatten({ background: { r: 255, g: 255, b: 255 } })
-    .toBuffer();
-
-  return processed;
+  return Buffer.from(await resp.arrayBuffer());
 }
+
 
 
 
