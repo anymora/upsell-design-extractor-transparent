@@ -41,6 +41,54 @@ app.get("/", (req, res) => {
   res.send("teeinblue-artwork-resizer (Diff-Extraction + Tasche + Tasse + Shirts) läuft.");
 });
 
+
+
+// ============================================================================
+// ======================= DEBUG: NUR DESIGN-EXTRAKTION =======================
+// Dieser Endpoint gibt AUSSCHLIESSLICH das extrahierte Design als PNG zurück.
+// Kein Placement, kein Mockup, kein Overlay.
+// URL-Beispiel:
+// /debug-design?url=COMPOSITE_URL&mockup_url=BASE_MOCKUP_URL
+// ============================================================================
+
+app.get("/debug-design", async (req, res) => {
+  const artworkUrl = req.query.url;          // Composite (Mockup + Design)
+  const baseMockupUrl = req.query.mockup_url; // Leeres Mockup
+
+  if (!artworkUrl || typeof artworkUrl !== "string") {
+    return res.status(400).json({ error: "Parameter 'url' fehlt oder ist ungültig." });
+  }
+
+  if (!baseMockupUrl || typeof baseMockupUrl !== "string") {
+    return res.status(400).json({ error: "Parameter 'mockup_url' fehlt oder ist ungültig." });
+  }
+
+  try {
+    // Beide Bilder laden
+    const compositeBuffer = await loadImage(artworkUrl);
+    const baseBuffer = await loadImage(baseMockupUrl);
+
+    // NUR Design extrahieren (keine weitere Verarbeitung!)
+    const designBuffer = await extractDesign(baseBuffer, compositeBuffer, 30);
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(designBuffer);
+
+  } catch (err) {
+    console.error("Fehler in /debug-design:", err);
+    res.status(500).json({
+      error: "Interner Fehler in /debug-design",
+      detail: err.message || String(err),
+    });
+  }
+});
+
+// ===================== ENDE DEBUG DESIGN-EXTRAKTION =========================
+// ============================================================================
+
+
+
 // --------------------- Hilfsfunktionen ---------------------
 
 async function loadImage(url) {
