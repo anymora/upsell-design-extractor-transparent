@@ -868,8 +868,8 @@ app.get("/tee-black-preview", async (req, res) => {
       baseMockupUrl,
       mockupUrl: TEE_BLACK_MOCKUP_URL,
       scale: 0.34,
-      offsetX: 0.6,
-      offsetY: 0.5,
+      offsetX: 0.0,
+      offsetY: 0.05,
       overlayUrl: TEE_BLACK_OVERLAY_URL,
     });
 
