@@ -1,0 +1,16 @@
+{
+  "name": "teeinblue-artwork-resizer",
+  "version": "1.0.0",
+  "description": "Schnelles Artwork-Freistellen + Tragetaschen-Mockup mit remove.bg",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2",
+    "form-data": "^4.0.0",
+    "sharp": "^0.33.2"
+  }
+}
