@@ -96,8 +96,19 @@ async function loadImage(url) {
   if (!resp.ok) {
     throw new Error(`Bild konnte nicht geladen werden: ${url} (HTTP ${resp.status})`);
   }
-  return Buffer.from(await resp.arrayBuffer());
+
+  const buffer = Buffer.from(await resp.arrayBuffer());
+
+  // WICHTIG:
+  // Falls PNG Transparenz enthält → Alpha entfernen
+  // Dadurch verhindern wir Crash / falsche Diff-Berechnung
+  const processed = await sharp(buffer)
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .toBuffer();
+
+  return processed;
 }
+
 
 function colorDist(c1, c2) {
   const dr = c1[0] - c2[0];
@@ -874,8 +885,8 @@ app.get("/tee-white-preview", async (req, res) => {
       baseMockupUrl,
       mockupUrl: TEE_WHITE_MOCKUP_URL,
       scale: 0.38,
-      offsetX: 0.31,
-      offsetY: 0.27,
+      offsetX: 0.30,
+      offsetY: 0.28,
       overlayUrl: TEE_WHITE_OVERLAY_URL,
     });
 
@@ -916,8 +927,8 @@ app.get("/tee-black-preview", async (req, res) => {
       baseMockupUrl,
       mockupUrl: TEE_BLACK_MOCKUP_URL,
       scale: 0.38,
-      offsetX: 0.31,
-      offsetY: 0.27,
+      offsetX: 0.30,
+      offsetY: 0.28,
       overlayUrl: TEE_BLACK_OVERLAY_URL,
     });
 
