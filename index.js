@@ -792,9 +792,9 @@ app.get("/tote-preview", async (req, res) => {
       artworkUrl,
       baseMockupUrl,
       mockupUrl: TOTE_MOCKUP_URL,
-      scale: 0.42,
-      offsetX: 0.26,
-      offsetY: 0.46,
+      scale: 0.325,
+      offsetX: 0.35,
+      offsetY: 0.39,
       overlayUrl: undefined,
     });
 
