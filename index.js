@@ -495,7 +495,7 @@ function colorDistance(r1, g1, b1, r2, g2, b2) {
  * @param {number} tolerance - Farbtoleranz (Standard: 30)
  * @returns {Promise<Buffer>} - PNG mit transparentem Hintergrund
  */
-async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
+async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
   // Beide Bilder laden und auf gleiche Größe bringen
   const baseMeta = await sharp(baseBuffer).metadata();
   const compMeta = await sharp(compositeBuffer).metadata();
