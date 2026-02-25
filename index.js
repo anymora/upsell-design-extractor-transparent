@@ -641,7 +641,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
 
   // Kleine, dünne Komponenten entfernen (1.5% Schwelle + Dicke < 4px)
   const mainSize = components.length > 0 ? components[largestIdx].pixels.length : 0;
-  const sizeThreshold = Math.max(240, mainSize * 0.03);
+  const sizeThreshold = Math.max(240, mainSize * 0.04);
 
   for (let c = 0; c < components.length; c++) {
     const comp = components[c];
@@ -662,7 +662,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
     const avgThickness = comp.pixels.length / Math.max(1, maxDim);
 
     // Nur dünne Strukturen entfernen (< 4px), Text bleibt erhalten
-    if (avgThickness < 4) {
+    if (avgThickness < 6) {
       for (const pi of comp.pixels) {
         outRaw[pi * 4] = 0;
         outRaw[pi * 4 + 1] = 0;
