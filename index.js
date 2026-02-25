@@ -700,7 +700,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
 // ========== MAIN FUNCTION (Name bleibt gleich) ==========
 // Änderung: erwartet jetzt zusätzlich baseMockupBuffer und nutzt extractDesign statt Grid-Removal
 async function removeGridBackgroundAdvanced(compositeBuffer, baseMockupBuffer) {
-  return extractDesign(baseMockupBuffer, compositeBuffer, 30);
+  return extractDesign(baseMockupBuffer, compositeBuffer, 50);
 }
 
 // --------------------- Preview-Erstellung ---------------------
