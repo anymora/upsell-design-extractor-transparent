@@ -69,7 +69,7 @@ app.get("/debug-design", async (req, res) => {
     const baseBuffer = await loadImage(baseMockupUrl);
 
     // NUR Design extrahieren (keine weitere Verarbeitung!)
-    const designBuffer = await extractDesign(baseBuffer, compositeBuffer, 50);
+    const designBuffer = await extractDesign(baseBuffer, compositeBuffer, 30);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Cache-Control", "no-store");
@@ -495,7 +495,7 @@ function colorDistance(r1, g1, b1, r2, g2, b2) {
  * @param {number} tolerance - Farbtoleranz (Standard: 30)
  * @returns {Promise<Buffer>} - PNG mit transparentem Hintergrund
  */
-async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
+async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
   // Beide Bilder laden und auf gleiche Größe bringen
   const baseMeta = await sharp(baseBuffer).metadata();
   const compMeta = await sharp(compositeBuffer).metadata();
@@ -641,7 +641,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
 
   // Kleine, dünne Komponenten entfernen (1.08% Schwelle + Dicke < 8px)
   const mainSize = components.length > 0 ? components[largestIdx].pixels.length : 0;
-  const sizeThreshold = Math.max(240, mainSize * 0.08);
+  const sizeThreshold = Math.max(240, mainSize * 0.10);
 
   for (let c = 0; c < components.length; c++) {
     const comp = components[c];
@@ -662,7 +662,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
     const avgThickness = comp.pixels.length / Math.max(1, maxDim);
 
     // Nur dünne Strukturen entfernen (< 4px), Text bleibt erhalten
-    if (avgThickness < 8) {
+    if (avgThickness < 10) {
       for (const pi of comp.pixels) {
         outRaw[pi * 4] = 0;
         outRaw[pi * 4 + 1] = 0;
@@ -700,7 +700,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 50) {
 // ========== MAIN FUNCTION (Name bleibt gleich) ==========
 // Änderung: erwartet jetzt zusätzlich baseMockupBuffer und nutzt extractDesign statt Grid-Removal
 async function removeGridBackgroundAdvanced(compositeBuffer, baseMockupBuffer) {
-  return extractDesign(baseMockupBuffer, compositeBuffer, 50);
+  return extractDesign(baseMockupBuffer, compositeBuffer, 30);
 }
 
 // --------------------- Preview-Erstellung ---------------------
