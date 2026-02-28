@@ -641,7 +641,7 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
 
   // Kleine, dünne Komponenten entfernen (1.08% Schwelle + Dicke < 8px)
   const mainSize = components.length > 0 ? components[largestIdx].pixels.length : 0;
-  const sizeThreshold = Math.max(240, mainSize * 0.10);
+  const sizeThreshold = Math.max(240, mainSize * 0.80);
 
   for (let c = 0; c < components.length; c++) {
     const comp = components[c];
