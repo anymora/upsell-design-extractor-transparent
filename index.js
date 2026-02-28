@@ -672,6 +672,53 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
     }
   }
 
+
+  // Phase 4.5: Restaurierungs-Pass — dunkle Design-Pixel wiederherstellen,
+  // die fälschlich halbtransparent gemacht wurden weil sie dem Mockup ähneln.
+  const survivingMask = new Uint8Array(totalPixels);
+  for (let i = 0; i < totalPixels; i++) {
+    if (outRaw[i * 4 + 3] > 0) survivingMask[i] = 1;
+  }
+
+  // Maske um 1px erweitern um angrenzende entfernte Pixel einzuschließen
+  const dilatedMask = new Uint8Array(survivingMask);
+  const dilateRadius = 1;
+  for (let y = dilateRadius; y < height - dilateRadius; y++) {
+    for (let x = dilateRadius; x < width - dilateRadius; x++) {
+      if (survivingMask[y * width + x]) continue;
+      let found = false;
+      for (let dy = -dilateRadius; dy <= dilateRadius && !found; dy++) {
+        for (let dx = -dilateRadius; dx <= dilateRadius && !found; dx++) {
+          if (survivingMask[(y + dy) * width + (x + dx)]) {
+            found = true;
+          }
+        }
+      }
+      if (found) dilatedMask[y * width + x] = 1;
+    }
+  }
+
+  // Pixel wiederherstellen: innerhalb der Design-Region halbtransparente
+  // oder entfernte Pixel mit Originaldaten aus dem Composite ersetzen
+  const restoreAlphaThreshold = 230;
+  for (let i = 0; i < totalPixels; i++) {
+    if (!dilatedMask[i]) continue;
+    const idx = i * 4;
+    const currentAlpha = outRaw[idx + 3];
+
+    if (currentAlpha >= restoreAlphaThreshold) continue;
+
+    const dist = diffMap[i];
+    if (dist <= tolerance * 0.5) continue;
+
+    outRaw[idx] = compRaw[idx];
+    outRaw[idx + 1] = compRaw[idx + 1];
+    outRaw[idx + 2] = compRaw[idx + 2];
+    outRaw[idx + 3] = 255;
+  }
+
+  
+
   // Phase 5: Auto-Crop
   let minX = width, minY = height, maxX = 0, maxY = 0;
   for (let y = 0; y < height; y++) {
