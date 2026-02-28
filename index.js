@@ -499,8 +499,6 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
   // Beide Bilder laden und auf gleiche Größe bringen und in JPG konvertieren
 
   
-async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
-
   // ===== PHASE 0: JPG-Konvertierung (Transparenz entfernen) =====
   // Konvertiert beide Bilder zu JPG, damit transparente PNG/WebP-Hintergründe
   // durch einen weißen Hintergrund ersetzt werden.
