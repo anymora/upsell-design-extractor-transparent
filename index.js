@@ -639,9 +639,9 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
     }
   }
 
-  // Kleine, dünne Komponenten entfernen (1.08% Schwelle + Dicke < 8px)
+  // Kleine, dünne Komponenten entfernen (1.40% Schwelle + Dicke < 10px)
   const mainSize = components.length > 0 ? components[largestIdx].pixels.length : 0;
-  const sizeThreshold = Math.max(240, mainSize * 0.12);
+  const sizeThreshold = Math.max(240, mainSize * 0.40);
 
   for (let c = 0; c < components.length; c++) {
     const comp = components[c];
@@ -680,9 +680,9 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
     if (outRaw[i * 4 + 3] > 0) survivingMask[i] = 1;
   }
 
-  // Maske um 1px erweitern um angrenzende entfernte Pixel einzuschließen
+  // Maske um 0px erweitern um angrenzende entfernte Pixel einzuschließen
   const dilatedMask = new Uint8Array(survivingMask);
-  const dilateRadius = 1;
+  const dilateRadius = 0;
   for (let y = dilateRadius; y < height - dilateRadius; y++) {
     for (let x = dilateRadius; x < width - dilateRadius; x++) {
       if (survivingMask[y * width + x]) continue;
