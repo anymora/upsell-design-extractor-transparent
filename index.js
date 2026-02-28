@@ -514,10 +514,6 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
     .jpeg({ quality: 100 })
     .toBuffer();
 
-  // ===== Ab hier weiter wie bisher (Phase 1+) =====
-  const baseMeta = await sharp(baseBuffer).metadata();
-  // ... rest of existing code
-
 
 
   
