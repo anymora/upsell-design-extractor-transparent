@@ -496,7 +496,31 @@ function colorDistance(r1, g1, b1, r2, g2, b2) {
  * @returns {Promise<Buffer>} - PNG mit transparentem Hintergrund
  */
 async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
-  // Beide Bilder laden und auf gleiche Größe bringen
+  // Beide Bilder laden und auf gleiche Größe bringen und in JPG konvertieren
+
+  
+async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
+
+  // ===== PHASE 0: JPG-Konvertierung (Transparenz entfernen) =====
+  // Konvertiert beide Bilder zu JPG, damit transparente PNG/WebP-Hintergründe
+  // durch einen weißen Hintergrund ersetzt werden.
+  baseBuffer = await sharp(baseBuffer)
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: 100 })
+    .toBuffer();
+
+  compositeBuffer = await sharp(compositeBuffer)
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: 100 })
+    .toBuffer();
+
+  // ===== Ab hier weiter wie bisher (Phase 1+) =====
+  const baseMeta = await sharp(baseBuffer).metadata();
+  // ... rest of existing code
+
+
+
+  
   const baseMeta = await sharp(baseBuffer).metadata();
   const compMeta = await sharp(compositeBuffer).metadata();
 
