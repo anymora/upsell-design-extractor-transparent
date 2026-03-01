@@ -691,6 +691,54 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 30) {
   }
 
 
+
+// Phase 4.1: Proximity-Filter — entferne Komponenten die zu weit vom Hauptdesign entfernt sind
+// Erstelle eine Distanz-Maske von der größten Komponente
+const mainPixelSet = new Set();
+if (components.length > 0) {
+  for (const pi of components[largestIdx].pixels) {
+    mainPixelSet.add(pi);
+  }
+}
+
+const proximityRadius = 8; // Pixel-Abstand zum Hauptdesign
+
+for (let c = 0; c < components.length; c++) {
+  if (c === largestIdx) continue;
+  const comp = components[c];
+  
+  // Prüfe ob IRGENDEIN Pixel dieser Komponente nah am Hauptdesign ist
+  let isNearMain = false;
+  for (const pi of comp.pixels) {
+    if (isNearMain) break;
+    const px = pi % width;
+    const py = (pi - px) / width;
+    
+    for (let dy = -proximityRadius; dy <= proximityRadius && !isNearMain; dy++) {
+      for (let dx = -proximityRadius; dx <= proximityRadius && !isNearMain; dx++) {
+        const nx = px + dx, ny = py + dy;
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+        if (mainPixelSet.has(ny * width + nx)) {
+          isNearMain = true;
+        }
+      }
+    }
+  }
+  
+  // Nicht in der Nähe des Hauptdesigns → Artefakt → entfernen
+  if (!isNearMain) {
+    for (const pi of comp.pixels) {
+      outRaw[pi * 4] = 0;
+      outRaw[pi * 4 + 1] = 0;
+      outRaw[pi * 4 + 2] = 0;
+      outRaw[pi * 4 + 3] = 0;
+    }
+  }
+}
+
+  
+
+
   // Phase 4.5: Restaurierungs-Pass — dunkle Design-Pixel wiederherstellen,
   // die fälschlich halbtransparent gemacht wurden weil sie dem Mockup ähneln.
   const survivingMask = new Uint8Array(totalPixels);
