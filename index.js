@@ -69,7 +69,7 @@ app.get("/debug-design", async (req, res) => {
     const baseBuffer = await loadImage(baseMockupUrl);
 
     // NUR Design extrahieren (keine weitere Verarbeitung!)
-    const designBuffer = await extractDesign(baseBuffer, compositeBuffer, 30);
+    const designBuffer = await extractDesign(baseBuffer, compositeBuffer, 10);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Cache-Control", "no-store");
