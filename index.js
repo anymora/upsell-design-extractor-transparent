@@ -701,7 +701,7 @@ if (components.length > 0) {
   }
 }
 
-const proximityRadius = 44; // Pixel-Abstand zum Hauptdesign
+const proximityRadius = 90; // Pixel-Abstand zum Hauptdesign
 
 for (let c = 0; c < components.length; c++) {
   if (c === largestIdx) continue;
