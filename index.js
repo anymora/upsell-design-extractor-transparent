@@ -434,10 +434,10 @@ async function makePreview({
     .png()
     .toBuffer();
 
-  // Skaliertes Design zentriert in der Druckfläche positionieren
+  // Skaliertes Design zentriert in der Druckfläche positionieren (Höhe etwas nach oben versetzt um 30%)
   const scaledMeta = await sharp(scaled).metadata();
   const centeredLeft = areaLeft + Math.round((areaPixelW - scaledMeta.width) / 2);
-  const centeredTop = areaTop + Math.round((areaPixelH - scaledMeta.height) / 2);
+  const centeredTop = areaTop + Math.round((areaPixelH - scaledMeta.height) * 0.3);
 
    // 5. Design auf Ziel-Mockup compositen
   const finalBuf = await targetSharp
