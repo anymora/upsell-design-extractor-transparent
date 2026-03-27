@@ -1,4 +1,3 @@
-// index.js — Generisches Upsell-Preview-Backend
 // Kein hardcoded Produkt mehr. Alles kommt per Query-Parameter.
 import express from "express";
 import fetch from "node-fetch";
