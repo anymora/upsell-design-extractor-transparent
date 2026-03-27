@@ -22,6 +22,7 @@ const SHOPIFY_FETCH_HEADERS = {
 
 // Cache: artworkUrl + target -> fertiges PNG
 const previewCache = new Map();
+const designCache = new Map();
 
 // Healthcheck
 app.get("/", (req, res) => {
@@ -405,13 +406,19 @@ async function makePreview({
   const baseBuf = await loadImage(baseMockupUrl);
   const targetBuf = await loadImage(targetMockupUrl);
 
-  // 2. Design extrahieren (Diff zwischen Base und Composite)
+    // 2. Design extrahieren (mit Cache — gleiches Design wird nur 1x extrahiert)
+  const designCacheKey = `${artworkUrl}__${baseMockupUrl}`;
   let designTransparent;
-  try {
-    designTransparent = await extractDesign(baseBuf, artBuf, 10);
-  } catch (err) {
-    console.error("Design-Extraction Fehler, verwende Fallback:", err);
-    designTransparent = await sharp(artBuf).ensureAlpha().png().toBuffer();
+  if (designCache.has(designCacheKey)) {
+    designTransparent = designCache.get(designCacheKey);
+  } else {
+    try {
+      designTransparent = await extractDesign(baseBuf, artBuf, 10);
+    } catch (err) {
+      console.error("Design-Extraction Fehler, verwende Fallback:", err);
+      designTransparent = await sharp(artBuf).ensureAlpha().png().toBuffer();
+    }
+    designCache.set(designCacheKey, designTransparent);
   }
 
   // 3. Ziel-Mockup Dimensionen lesen
@@ -437,7 +444,10 @@ async function makePreview({
   // Skaliertes Design zentriert in der Druckfläche positionieren (Höhe etwas nach oben versetzt um 30%)
   const scaledMeta = await sharp(scaled).metadata();
   const centeredLeft = areaLeft + Math.round((areaPixelW - scaledMeta.width) / 2);
-  const centeredTop = areaTop + Math.round((areaPixelH - scaledMeta.height) * 0.3);
+  const freeSpaceV = areaPixelH - scaledMeta.height;
+const centeredTop = freeSpaceV > 20
+  ? areaTop + Math.round(freeSpaceV * 0.3)   // Genug Platz → 30% oben
+  : areaTop + Math.round(freeSpaceV / 2);     // Kein Platz → zentriert
 
    // 5. Design auf Ziel-Mockup compositen
   const finalBuf = await targetSharp
