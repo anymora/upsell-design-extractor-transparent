@@ -2,6 +2,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import sharp from "sharp";
+import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 const app = express();
 
@@ -19,7 +20,51 @@ const SHOPIFY_FETCH_HEADERS = {
   Accept: "image/avif,image/webp,image/png,image/*,*/*",
 };
 
-// Cache: artworkUrl + target -> fertiges PNG
+// ============================================================================
+// R2 CLIENT
+// ============================================================================
+
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+
+const R2_BUCKET = process.env.R2_BUCKET_NAME;
+const IMG_BASE_URL = "https://img.boostomize.de";
+
+async function buildImageHash(artworkUrl, baseMockupUrl, targetMockupUrl) {
+  const data = new TextEncoder().encode(`${artworkUrl}|${baseMockupUrl}|${targetMockupUrl}`);
+  const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function existsInR2(key) {
+  try {
+    await r2.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function uploadToR2(buffer, key) {
+  await r2.send(new PutObjectCommand({
+    Bucket: R2_BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: "image/jpeg",
+    CacheControl: "public, max-age=31536000, immutable",
+  }));
+  return `${IMG_BASE_URL}/${key}`;
+}
+
+// Cache: hash -> öffentliche URL
 const previewCache = new Map();
 const designCache = new Map();
 
@@ -82,13 +127,22 @@ app.get("/generic-preview", async (req, res) => {
   const printW = parseFloat(req.query.print_w) || 0.35;
   const printH = parseFloat(req.query.print_h) || 0.40;
 
-  const cacheKey = `GENERIC_${artworkUrl}_${baseMockupUrl}_${targetMockupUrl}_${printX}_${printY}_${printW}_${printH}`;
-  if (previewCache.has(cacheKey)) {
-    res.setHeader("Content-Type", "image/jpeg");
-    return res.send(previewCache.get(cacheKey));
-  }
-
   try {
+    const hash = await buildImageHash(artworkUrl, baseMockupUrl, targetMockupUrl);
+    const r2Key = `upsell/${hash}.jpg`;
+    const publicUrl = `${IMG_BASE_URL}/${r2Key}`;
+
+    // RAM-Cache
+    if (previewCache.has(hash)) {
+      return res.json({ ok: true, url: previewCache.get(hash) });
+    }
+
+    // R2-Cache (bereits hochgeladen)
+    if (await existsInR2(r2Key)) {
+      previewCache.set(hash, publicUrl);
+      return res.json({ ok: true, url: publicUrl });
+    }
+
     const finalBuffer = await makePreview({
       artworkUrl,
       baseMockupUrl,
@@ -99,10 +153,10 @@ app.get("/generic-preview", async (req, res) => {
       printH,
     });
 
-    previewCache.set(cacheKey, finalBuffer);
-    res.setHeader("Content-Type", "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.send(finalBuffer);
+    await uploadToR2(finalBuffer, r2Key);
+    previewCache.set(hash, publicUrl);
+
+    return res.json({ ok: true, url: publicUrl });
   } catch (err) {
     console.error("Fehler in /generic-preview:", err);
     res.status(500).json({ error: "Interner Fehler", detail: err.message });
@@ -144,13 +198,20 @@ for (const [path, cfg] of Object.entries(LEGACY_CONFIGS)) {
       return res.status(400).json({ error: "Parameter 'mockup_url' fehlt." });
     }
 
-    const cacheKey = `LEGACY_${path}_${artworkUrl}_${baseMockupUrl}`;
-    if (previewCache.has(cacheKey)) {
-      res.setHeader("Content-Type", "image/jpeg");
-      return res.send(previewCache.get(cacheKey));
-    }
-
     try {
+      const hash = await buildImageHash(artworkUrl, baseMockupUrl, cfg.targetMockupUrl);
+      const r2Key = `upsell/${hash}.jpg`;
+      const publicUrl = `${IMG_BASE_URL}/${r2Key}`;
+
+      if (previewCache.has(hash)) {
+        return res.json({ ok: true, url: previewCache.get(hash) });
+      }
+
+      if (await existsInR2(r2Key)) {
+        previewCache.set(hash, publicUrl);
+        return res.json({ ok: true, url: publicUrl });
+      }
+
       const finalBuffer = await makePreview({
         artworkUrl,
         baseMockupUrl,
@@ -161,9 +222,10 @@ for (const [path, cfg] of Object.entries(LEGACY_CONFIGS)) {
         printH: cfg.printH,
       });
 
-      previewCache.set(cacheKey, finalBuffer);
-      res.setHeader("Content-Type", "image/jpeg");
-      res.send(finalBuffer);
+      await uploadToR2(finalBuffer, r2Key);
+      previewCache.set(hash, publicUrl);
+
+      return res.json({ ok: true, url: publicUrl });
     } catch (err) {
       console.error(`Fehler in ${path}:`, err);
       res.status(500).json({ error: "Interner Fehler", detail: err.message });
@@ -332,35 +394,13 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 10) {
   console.log(`[Timing] Phase 4 (Connected Components): ${Date.now() - t3}ms`);
   const t4 = Date.now();
 
-  // ============================================================================
-  // Phase 4.1: Proximity-Filter — DILATION MASK (pixelgenau + schnell)
-  //
-  // Problem mit Original:   für jeden Fremdpixel 32.400 Pixel scannen → langsam
-  // Problem mit Bbox-Fix:   T-Shirt-Umriss umschließt Design → Abstand = 0 → bleibt fälschlicherweise
-  //
-  // Diese Lösung baut einmalig eine "Dilation Mask":
-  //   Alle Pixel die innerhalb von 90px eines Haupt-Cluster-Pixels liegen werden markiert.
-  //   Danach: jede Fremdpixel-Prüfung = ein Array-Zugriff, O(1).
-  //
-  // Algorithmus (zwei Prefix-Summen-Pässe, O(width × height)):
-  //   Pass 1 horizontal: für jede Zeile, markiere alle Pixel ±90px von einem Haupt-Pixel
-  //   Pass 2 vertikal:   für jede Spalte, markiere alle Pixel ±90px von einem h-dilated Pixel
-  //   Ergebnis: quadratische Dilation, semantisch identisch zum Original (±90px in jede Richtung)
-  //
-  // T-Shirt-Umriss: seine Pixel liegen am Rand, weit vom Design → nicht in der Maske → entfernt ✓
-  // "EST.", "9990": nah am Design → in der Maske → bleiben ✓
-  // Laufzeit: ~490.000 Ops statt ~162.000.000 Ops beim Original → ~300× schneller
-  // ============================================================================
-
   const proximityRadius = 90;
 
-  // Schritt 1: Binäre Maske der Haupt-Cluster-Pixel
   const mainMask = new Uint8Array(totalPixels);
   if (components.length > 0) {
     for (const pi of components[largestIdx].pixels) mainMask[pi] = 1;
   }
 
-  // Schritt 2: Horizontale Dilation via Prefix-Summen
   const hDilated = new Uint8Array(totalPixels);
   const rowPrefix = new Int32Array(width + 1);
   for (let y = 0; y < height; y++) {
@@ -376,7 +416,6 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 10) {
     }
   }
 
-  // Schritt 3: Vertikale Dilation via Prefix-Summen
   const dilationMask = new Uint8Array(totalPixels);
   const colPrefix = new Int32Array(height + 1);
   for (let x = 0; x < width; x++) {
@@ -391,7 +430,6 @@ async function extractDesign(baseBuffer, compositeBuffer, tolerance = 10) {
     }
   }
 
-  // Schritt 4: Fremd-Cluster entfernen wenn keiner ihrer Pixel in der Maske liegt
   for (let c = 0; c < components.length; c++) {
     if (c === largestIdx) continue;
     const comp = components[c];
@@ -455,7 +493,6 @@ async function makePreview({
 }) {
   const t0 = Date.now();
 
-  // Alle 3 Bilder parallel laden
   const [artBuf, baseBuf, targetBuf] = await Promise.all([
     loadImage(artworkUrl),
     loadImage(baseMockupUrl),
@@ -464,7 +501,6 @@ async function makePreview({
 
   console.log(`[Timing] Bildladung (parallel): ${Date.now() - t0}ms`);
 
-  // Design extrahieren (mit Cache — gleiches Design wird nur 1x extrahiert)
   const designCacheKey = `${artworkUrl}__${baseMockupUrl}`;
   let designTransparent;
   if (designCache.has(designCacheKey)) {
@@ -482,12 +518,10 @@ async function makePreview({
 
   const t1 = Date.now();
 
-  // Ziel-Mockup Dimensionen lesen
   const targetSharp = sharp(targetBuf);
   const meta = await targetSharp.metadata();
   if (!meta.width || !meta.height) throw new Error("Konnte Ziel-Mockup-Größe nicht lesen.");
 
-  // Design in die Druckfläche einpassen
   const areaPixelW = Math.round(meta.width * printW);
   const areaPixelH = Math.round(meta.height * printH);
   const areaLeft = Math.round(meta.width * printX);
