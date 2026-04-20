@@ -33,7 +33,7 @@ const r2 = new S3Client({
   },
 });
 
-const R2_BUCKET = process.env.R2_BUCKET_NAME;
+const R2_BUCKET = process.env.R2_BUCKET;
 const IMG_BASE_URL = "https://img.boostomize.de";
 
 async function buildImageHash(artworkUrl, baseMockupUrl, targetMockupUrl) {
