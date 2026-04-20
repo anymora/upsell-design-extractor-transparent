@@ -1,7 +1,7 @@
 {
-  "name": "teeinblue-artwork-resizer",
+  "name": "Boostomize - Upsell personalisierte Produkte",
   "version": "1.0.0",
-  "description": "Schnelles Artwork-Freistellen + Tragetaschen-Mockup mit remove.bg",
+  "description": "Exklusive und einzigartige Möglichkeit, Upsells für personalisierte Print on Demand Produkte anzubieten.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
     "express": "^4.19.2",
     "node-fetch": "^3.3.2",
     "form-data": "^4.0.0",
-    "sharp": "^0.33.2"
+    "sharp": "^0.33.2",
+    "@aws-sdk/client-s3": "^3.0.0"
   }
 }
